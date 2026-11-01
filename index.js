@@ -41,6 +41,45 @@ app.get('/studios/:id', async (req, res) => {
     res.send(result)
 })
 
+app.patch('/studios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedData = req.body;
+
+        const result = await studioCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updatedData }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: "Studio not found" });
+        }
+
+        res.status(200).json({ message: "Studio updated successfully", result });
+    } catch (error) {
+        res.status(500).json({ error: "Invalid ID or server error" });
+    }
+});
+app.delete('/studios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid studio id" });
+        }
+
+        const result = await studioCollection.deleteOne({ _id: new ObjectId(id) });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ error: "Studio not found" });
+        }
+
+        res.status(200).json({ message: "Studio deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 app.get('/', (req, res) => {
     res.send({ Message: 'Server working' })
 })
