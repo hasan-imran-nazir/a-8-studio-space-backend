@@ -174,3 +174,4 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(process.env.CLIENT_URL);
 });
+export default app;
