@@ -23,6 +23,7 @@ export async function connectToMongoDB() {
 const mongoClient = await connectToMongoDB()
 const db = mongoClient.db("studios")
 const studioCollection = db.collection("studio")
+const bookingCollection = db.collection("booking")
 
 app.post('/add-studio', async (req, res) => {
     const data = req.body
@@ -77,6 +78,58 @@ app.delete('/studios/:id', async (req, res) => {
         res.status(200).json({ message: "Studio deleted successfully" });
     } catch (error) {
         res.status(500).json({ error: "Server error" });
+    }
+});
+
+app.post('/add-booking', async (req, res) => {
+    const data = req.body
+    const result = await bookingCollection.insertOne(data)
+    console.log(result)
+    res.send(result)
+})
+
+app.get('/bookings', async (req, res) => {
+    try {
+        const { email } = req.query;
+        const query = email ? { email } : {};
+        const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+});
+
+app.get('/my-bookings/:email', async (req, res) => {
+    const { email } = req.params;
+    const result = await bookingCollection.find({ email: email }).toArray()
+    res.send(result)
+})
+
+app.delete('/mybookings/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const query = ObjectId.isValid(id)
+            ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+            : { _id: id };
+        const result = await bookingCollection.deleteOne(query);
+        console.log("Deleted booking:", id, result);
+        res.send(result);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete booking" });
+    }
+});
+
+app.get('/mybookings/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const query = ObjectId.isValid(id)
+            ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+            : { _id: id };
+        const result = await bookingCollection.deleteOne(query);
+        console.log("Deleted booking (GET):", id, result);
+        res.send(result);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete booking" });
     }
 });
 
