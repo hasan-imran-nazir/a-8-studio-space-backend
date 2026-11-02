@@ -105,7 +105,7 @@ app.delete('/studios/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ error: "Studio not found" });
         }
 
-        res.status(200).json({ message: "Studio deleted successfully" });
+        res.status(200).json({ message: "Studio deleted successfully!" });
     } catch (error) {
         res.status(500).json({ error: "Server error" });
     }
@@ -120,7 +120,7 @@ app.post('/add-booking', verifyToken, async (req, res) => {
     });
 
     if (existingBooking) {
-        return res.status(409).json({ error: "This studio is already booked" });
+        return res.status(409).json({ error: "This studio is already booked!" });
     }
 
     const result = await bookingCollection.insertOne(data);
