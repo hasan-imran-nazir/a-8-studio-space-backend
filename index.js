@@ -2,7 +2,7 @@ import express from "express";
 import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 import cors from "cors";
-import { jwtVerify, createRemoteJWKSet } from "jose";
+import { decodeProtectedHeader, importJWK, jwtVerify } from "jose";
 const app = express();
 
 const PORT = 8000;
@@ -24,11 +24,23 @@ const mongoClient = await connectToMongoDB();
 const db = mongoClient.db("studios");
 const studioCollection = db.collection("studio");
 const bookingCollection = db.collection("booking");
+const jwksCollection = db.collection("jwks");
 
-const AUTH_URL = process.env.BETTER_AUTH_URL;
-const JWKS = createRemoteJWKSet(
-  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
-);
+async function getSigningKey(kid) {
+  if (!kid) return null;
+
+  const query = ObjectId.isValid(kid)
+    ? { $or: [{ _id: new ObjectId(kid) }, { _id: kid }] }
+    : { _id: kid };
+  const doc = await jwksCollection.findOne(query);
+  if (!doc) return null;
+
+  const alg = doc.alg ?? "EdDSA";
+  const publicKey =
+    typeof doc.publicKey === "string" ? JSON.parse(doc.publicKey) : doc.publicKey;
+
+  return importJWK({ ...publicKey, alg, kid: String(doc._id) }, alg);
+}
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -41,7 +53,13 @@ const verifyToken = async (req, res, next) => {
   }
 
   try {
-    await jwtVerify(token, JWKS);
+    const { kid } = decodeProtectedHeader(token);
+    const key = await getSigningKey(kid);
+    if (!key) {
+      console.error("JWT Verification Failed: no signing key for kid", kid);
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    await jwtVerify(token, key);
     next();
   } catch (err) {
     console.error("JWT Verification Failed:", err.message);
